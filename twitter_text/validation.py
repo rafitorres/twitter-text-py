@@ -6,12 +6,12 @@ from twitter_text.unicode import force_unicode
 from twitter_text.extractor import Extractor
 from twitter_text.regex import REGEXEN
 
-MAX_LENGTH = 140
+MAX_LENGTH = 280
 
 DEFAULT_TCO_URL_LENGTHS = {
-  'short_url_length': 22,
+  'short_url_length': 23,
   'short_url_length_https': 23,
-  'characters_reserved_per_media': 22,
+  'characters_reserved_per_media': 0,
 }
 
 class Validation(object):
