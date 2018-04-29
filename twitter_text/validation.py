@@ -14,11 +14,38 @@ DEFAULT_TCO_URL_LENGTHS = {
   'characters_reserved_per_media': 0,
 }
 
+WEIGHTS = {
+    'scale': 100,
+    'default_weight': 200,
+    'ranges': [
+        {
+            'start': 0,
+            'end': 4351,
+            'weight': 100
+        },
+        {
+            'start': 8192,
+            'end': 8205,
+            'weight': 100
+        },
+        {
+            'start': 8208,
+            'end': 8223,
+            'weight': 100
+        },
+        {
+            'start': 8242,
+            'end': 8247,
+            'weight': 100
+        }
+    ]
+}
+
 class Validation(object):
     def __init__(self, text, **kwargs):
         self.text = force_unicode(text)
         self.parent = kwargs.get('parent', False)
-        
+
     def tweet_length(self, options = {}):
         """
         Returns the length of the string as it would be displayed. This is equivilent to the length of the Unicode NFC
@@ -32,6 +59,13 @@ class Validation(object):
              … The NFC of {U+0065, U+0301} is {U+00E9}, which is a single chracter and a +display_length+ of 1
 
          The string could also contain U+00E9 already, in which case the canonicalization will not change the value.
+
+        After NFC normalization, all characters in the tweet are weighted against a set of twitter rules that define
+        relative weights for different ranges of characters as defined here:
+
+        https://developer.twitter.com/en/docs/developer-utilities/twitter-text.html
+
+        Finally, every url is extracted and counted as a fixed number of characters
         """
 
         assert (not self.parent or not getattr(self.parent, 'has_been_linked', False) ), 'The validator should only be run on text before it has been modified.'
@@ -40,8 +74,20 @@ class Validation(object):
             if not key in options:
                 options[key] = DEFAULT_TCO_URL_LENGTHS[key]
 
-        length = len(self.text)
-        # thanks force_unicode for making this so much simpler than the ruby version
+        collective_weight = 0
+        for char in self.text:
+            codepoint = ord(char)
+            char_weight = WEIGHTS['default_weight']
+            if codepoint >= 0xd800 and codepoint <= 0xdbff:
+                # This is a surrogate character, don't count it
+                char_weight = 0
+            else:
+                for rng in WEIGHTS['ranges']:
+                    if rng['start'] <= codepoint <= rng['end']:
+                        char_weight = rng['weight']
+            collective_weight = collective_weight + char_weight
+
+        length = collective_weight / WEIGHTS['scale']
 
         for url in Extractor(self.text).extract_urls_with_indices():
             # remove the link of the original URL
@@ -52,15 +98,15 @@ class Validation(object):
         if self.parent and hasattr(self.parent, 'tweet_length'):
             self.parent.tweet_length = length
         return length
-    
+
     def tweet_invalid(self):
         """
         Check the text for any reason that it may not be valid as a Tweet. This is meant as a pre-validation
         before posting to api.twitter.com. There are several server-side reasons for Tweets to fail but this pre-validation
         will allow quicker feedback.
-        
+
         Returns false if this text is valid. Otherwise one of the following Symbols will be returned:
-        
+
             "Too long":: if the text is too long
             "Empty text":: if the text is empty
             "Invalid characters":: if the text contains non-Unicode or any of the disallowed Unicode characters
@@ -77,7 +123,7 @@ class Validation(object):
 
         if re.search(ur''.join(REGEXEN['invalid_control_characters']), self.text):
             valid, validation_error = False, 'Invalid characters'
-            
+
         if self.parent and hasattr(self.parent, 'tweet_is_valid'):
             self.parent.tweet_is_valid = valid
         if self.parent and hasattr(self.parent, 'tweet_validation_error'):
@@ -121,9 +167,9 @@ class Validation(object):
 
         if not (
             (
-                not require_protocol 
+                not require_protocol
                 or (
-                    self._valid_match(scheme, REGEXEN['validate_url_scheme']) 
+                    self._valid_match(scheme, REGEXEN['validate_url_scheme'])
                     and re.compile(ur'^https?$', re.IGNORECASE).match(scheme)
                 )
             )
@@ -138,7 +184,7 @@ class Validation(object):
 
         return bool(
             (
-                unicode_domains 
+                unicode_domains
                 and self._valid_match(authority, REGEXEN['validate_url_unicode_authority'])
                 and REGEXEN['validate_url_unicode_authority'].match(authority).string == authority
             )
