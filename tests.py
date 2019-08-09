@@ -57,7 +57,7 @@ def assert_equal(result, test):
     sys.stdout.flush()
 
 # extractor section
-extractor_file = open(os.path.join('twitter-text-conformance', 'extract.yml'), 'r')
+extractor_file = open(os.path.join('twitter-text-conformance', 'conformance', 'extract.yml'), 'r')
 extractor_tests = yaml.load(force_unicode(extractor_file.read()))
 extractor_file.close()
 
@@ -95,7 +95,7 @@ for section in extractor_tests.get('tests'):
             assert_equal(extractor.extract_cashtags_with_indices(), test)
 
 # autolink section
-autolink_file = open(os.path.join('twitter-text-conformance', 'autolink.yml'), 'r')
+autolink_file = open(os.path.join('twitter-text-conformance', 'conformance', 'autolink.yml'), 'r')
 autolink_tests = yaml.load(force_unicode(autolink_file.read()))
 autolink_file.close()
 
@@ -128,7 +128,7 @@ for section in autolink_tests.get('tests'):
             assert_equal_without_attribute_order(autolink.auto_link_with_json(json.loads(test.get('json')), autolink_options), test)
 
 # hit_highlighting section
-hit_highlighting_file = open(os.path.join('twitter-text-conformance', 'hit_highlighting.yml'), 'r')
+hit_highlighting_file = open(os.path.join('twitter-text-conformance', 'conformance', 'hit_highlighting.yml'), 'r')
 hit_highlighting_tests = yaml.load(force_unicode(hit_highlighting_file.read()))
 hit_highlighting_file.close()
 
@@ -148,7 +148,7 @@ for section in hit_highlighting_tests.get('tests'):
 validation_tested = False
 validate_tests = None
 try:
-    validate_file = open(os.path.join('twitter-text-conformance', 'validate.yml'), 'r')
+    validate_file = open(os.path.join('twitter-text-conformance', 'conformance', 'validate.yml'), 'r')
     validate_file_contents = validate_file.read()
     validate_tests = yaml.load(re.sub(ur'\\n', '\n', validate_file_contents.encode('unicode-escape')))
     validate_file.close()
